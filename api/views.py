@@ -34,7 +34,24 @@ def import_order(request):
 
 @api_view(['GET'])
 def list_orders(request):
-    orders = Order.objects.all()
+    """
+    Handle GET request to retrieve orders.
+    - If ?id= provided (one or more), return matching orders.
+    - If no id provided, return all orders.
+    """
+    ids = request.GET.getlist('id')  # ?id=1&id=2 支援多個
+    if ids:
+        try:
+            ids = [int(i) for i in ids]
+        except ValueError:
+            return Response({"error": "Invalid ID format."}, status=status.HTTP_400_BAD_REQUEST)
+
+        orders = Order.objects.filter(id__in=ids)
+        if not orders.exists():
+            return Response({"error": "No matching orders found."}, status=status.HTTP_404_NOT_FOUND)
+    else:
+        orders = Order.objects.all()
+
     data = [
         {
             "order_id": order.id,
