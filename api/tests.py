@@ -25,7 +25,7 @@ class OrderTestCase(APITestCase):
     def test_list_orders(self):
         """Test listing orders"""
         Order.objects.create(order_number="ORD-TEST-001", total_price=99.99)
-        response = self.client.get('/api/import-order/list/', format='json')
+        response = self.client.get('/api/import-order/list/?access_token=omni_pretest_token', format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
 
@@ -89,7 +89,7 @@ class OrderTestCase(APITestCase):
     def test_get_single_order(self):
         """Test retrieving a single order by ID"""
         order = Order.objects.create(order_number="ORD-SINGLE", total_price=100.00)
-        response = self.client.get(f'/api/import-order/list/?id={order.id}')
+        response = self.client.get(f'/api/import-order/list/?id={order.id}&access_token=omni_pretest_token')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['order_number'], "ORD-SINGLE")
@@ -98,7 +98,7 @@ class OrderTestCase(APITestCase):
         """Test retrieving multiple orders by IDs"""
         order1 = Order.objects.create(order_number="ORD-MULTI-1", total_price=111.11)
         order2 = Order.objects.create(order_number="ORD-MULTI-2", total_price=222.22)
-        response = self.client.get(f'/api/import-order/list/?id={order1.id}&id={order2.id}')
+        response = self.client.get(f'/api/import-order/list/?id={order1.id}&id={order2.id}&access_token=omni_pretest_token')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
         returned_ids = {order["order_id"] for order in response.data}
@@ -107,13 +107,13 @@ class OrderTestCase(APITestCase):
 
     def test_get_nonexistent_order(self):
         """Test retrieving an order that does not exist"""
-        response = self.client.get('/api/import-order/list/?id=99999')
+        response = self.client.get('/api/import-order/list/?id=99999&access_token=omni_pretest_token')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIn("error", response.data)
 
     def test_get_invalid_id_format(self):
         """Test passing invalid ID format (non-integer)"""
-        response = self.client.get('/api/import-order/list/?id=abc')
+        response = self.client.get('/api/import-order/list/?id=abc&access_token=omni_pretest_token')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("error", response.data)
 
