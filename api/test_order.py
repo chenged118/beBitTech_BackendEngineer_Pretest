@@ -1,4 +1,3 @@
-from django.test import TestCase
 from rest_framework.test import APITestCase
 from rest_framework.test import APIClient
 from rest_framework import status
@@ -17,7 +16,7 @@ class OrderTestCase(APITestCase):
 
     def test_create_order(self):
         """Test creating a new order"""
-        response = self.client.post('/api/import-order/', self.order_data, format='json')
+        response = self.client.post('/api/orders/', self.order_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Order.objects.count(), 1)
         self.assertEqual(Order.objects.get().order_number, "ORD-TEST-001")
@@ -25,7 +24,7 @@ class OrderTestCase(APITestCase):
     def test_list_orders(self):
         """Test listing orders"""
         Order.objects.create(order_number="ORD-TEST-001", total_price=99.99)
-        response = self.client.get('/api/import-order/list/?access_token=omni_pretest_token', format='json')
+        response = self.client.get('/api/orders/list/?access_token=omni_pretest_token', format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
 
@@ -37,7 +36,7 @@ class OrderTestCase(APITestCase):
             "order_number": "ORD-UPDATED",
             "total_price": 88.88
         }
-        response = self.client.put(f'/api/import-order/{order.id}/update/', update_data, format='json')
+        response = self.client.put(f'/api/orders/{order.id}/update/', update_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         order.refresh_from_db()
         self.assertEqual(order.order_number, "ORD-UPDATED")
@@ -49,7 +48,7 @@ class OrderTestCase(APITestCase):
         delete_data = {
             "access_token": self.valid_token
         }
-        response = self.client.delete(f'/api/import-order/{order.id}/delete/', delete_data, format='json')
+        response = self.client.delete(f'/api/orders/{order.id}/delete/', delete_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(Order.objects.count(), 0)
     
@@ -59,7 +58,7 @@ class OrderTestCase(APITestCase):
             "access_token": "omni_pretest_token",
             "order_number": ""
         }
-        response = self.client.post('/api/import-order/', data, format='json')
+        response = self.client.post('/api/orders/', data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("error", response.data)
 
@@ -70,7 +69,7 @@ class OrderTestCase(APITestCase):
             "order_number": "ORD-00003",
             "total_price": 999.99
         }
-        response = self.client.post('/api/import-order/', data, format='json')
+        response = self.client.post('/api/orders/', data, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data["error"], "Invalid access token.")
 
@@ -82,14 +81,14 @@ class OrderTestCase(APITestCase):
             "order_number": "ORD-00001",  # duplicate
             "total_price": 888.88
         }
-        response = self.client.post('/api/import-order/', data, format='json')
+        response = self.client.post('/api/orders/', data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["error"], "Order number already exists.")
 
     def test_get_single_order(self):
         """Test retrieving a single order by ID"""
         order = Order.objects.create(order_number="ORD-SINGLE", total_price=100.00)
-        response = self.client.get(f'/api/import-order/list/?id={order.id}&access_token=omni_pretest_token')
+        response = self.client.get(f'/api/orders/list/?id={order.id}&access_token=omni_pretest_token')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['order_number'], "ORD-SINGLE")
@@ -98,7 +97,7 @@ class OrderTestCase(APITestCase):
         """Test retrieving multiple orders by IDs"""
         order1 = Order.objects.create(order_number="ORD-MULTI-1", total_price=111.11)
         order2 = Order.objects.create(order_number="ORD-MULTI-2", total_price=222.22)
-        response = self.client.get(f'/api/import-order/list/?id={order1.id}&id={order2.id}&access_token=omni_pretest_token')
+        response = self.client.get(f'/api/orders/list/?id={order1.id}&id={order2.id}&access_token=omni_pretest_token')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
         returned_ids = {order["order_id"] for order in response.data}
@@ -107,13 +106,13 @@ class OrderTestCase(APITestCase):
 
     def test_get_nonexistent_order(self):
         """Test retrieving an order that does not exist"""
-        response = self.client.get('/api/import-order/list/?id=99999&access_token=omni_pretest_token')
+        response = self.client.get('/api/orders/list/?id=99999&access_token=omni_pretest_token')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIn("error", response.data)
 
     def test_get_invalid_id_format(self):
         """Test passing invalid ID format (non-integer)"""
-        response = self.client.get('/api/import-order/list/?id=abc&access_token=omni_pretest_token')
+        response = self.client.get('/api/orders/list/?id=abc&access_token=omni_pretest_token')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("error", response.data)
 
@@ -124,7 +123,7 @@ class OrderTestCase(APITestCase):
             "access_token": "wrong_token",
             "total_price": 999.0
         }
-        response = self.client.put(f'/api/import-order/{order.id}/update/', data, format='json')
+        response = self.client.put(f'/api/orders/{order.id}/update/', data, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_delete_order_invalid_token(self):
@@ -133,5 +132,5 @@ class OrderTestCase(APITestCase):
         data = {
             "access_token": "wrong_token"
         }
-        response = self.client.delete(f'/api/import-order/{order.id}/delete/', data, format='json')
+        response = self.client.delete(f'/api/orders/{order.id}/delete/', data, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
