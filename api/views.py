@@ -115,6 +115,10 @@ def delete_order(request, order_id):
 @require_token
 def create_product(request):
     """Create a new product."""
+    access_token = request.data.get('access_token')
+    if access_token != ACCEPTED_TOKEN:
+        return Response({"error": "Invalid access token."}, status=status.HTTP_403_FORBIDDEN)
+
     name = request.data.get('name')
     price = request.data.get('price')
 
@@ -130,39 +134,36 @@ def create_product(request):
         "price": float(product.price)
     }, status=status.HTTP_201_CREATED)
 
-
 @api_view(['GET'])
 @require_token
 def list_products(request):
-    """List all products."""
-    products = Product.objects.all()
+    """List products by ID or all products if no ID is provided."""
+    access_token = request.query_params.get('access_token')
+    if access_token != ACCEPTED_TOKEN:
+        return Response({"error": "Invalid access token."}, status=status.HTTP_403_FORBIDDEN)
+
+    ids = request.query_params.get('id')
+
+    if ids:
+        try:
+            id_list = [int(i.strip()) for i in ids.split(',')]
+        except ValueError:
+            return Response({"error": "Invalid ID format."}, status=status.HTTP_400_BAD_REQUEST)
+
+        products = Product.objects.filter(id__in=id_list)
+        if not products.exists():
+            return Response({"error": "Product(s) not found."}, status=status.HTTP_404_NOT_FOUND)
+    else:
+        products = Product.objects.all()
+
     data = [
         {
-            "product_id": p.id,
-            "name": p.name,
-            "price": float(p.price),
-            "created_time": p.created_time
+            "id": product.id,
+            "name": product.name,
+            "price": float(product.price),
         }
-        for p in products
+        for product in products
     ]
-    return Response(data)
-
-
-@api_view(['GET'])
-@require_token
-def get_product(request, product_id):
-    """Retrieve a single product by ID."""
-    try:
-        product = Product.objects.get(id=product_id)
-    except Product.DoesNotExist:
-        return Response({"error": "Product not found."}, status=status.HTTP_404_NOT_FOUND)
-
-    data = {
-        "product_id": product.id,
-        "name": product.name,
-        "price": float(product.price),
-        "created_time": product.created_time
-    }
     return Response(data)
 
 
@@ -170,6 +171,10 @@ def get_product(request, product_id):
 @require_token
 def update_product(request, product_id):
     """Update an existing product by ID."""
+    access_token = request.data.get('access_token')
+    if access_token != ACCEPTED_TOKEN:
+        return Response({"error": "Invalid access token."}, status=status.HTTP_403_FORBIDDEN)
+
     try:
         product = Product.objects.get(id=product_id)
     except Product.DoesNotExist:
