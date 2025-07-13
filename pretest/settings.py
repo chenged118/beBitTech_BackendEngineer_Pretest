@@ -123,3 +123,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
 STATIC_URL = '/static/'
+
+# Load environment variables from .env file
+ACCEPTED_TOKEN = os.getenv("ACCEPTED_TOKEN", 'omni_pretest_token') 
