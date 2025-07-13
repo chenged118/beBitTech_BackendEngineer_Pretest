@@ -1,13 +1,19 @@
+from .decorators import require_token
+import os
+from dotenv import load_dotenv
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Order
 
-ACCEPTED_TOKEN = ('omni_pretest_token')
+load_dotenv()
+ACCEPTED_TOKEN = os.getenv("ACCEPTED_TOKEN")
 
 
 @api_view(['POST'])
+@require_token
 def import_order(request):
+    """Import a new order."""
     access_token = request.data.get('access_token')
     if access_token != ACCEPTED_TOKEN:
         return Response({"error": "Invalid access token."}, status=status.HTTP_403_FORBIDDEN)
@@ -33,12 +39,17 @@ def import_order(request):
     }, status=status.HTTP_201_CREATED)
 
 @api_view(['GET'])
+@require_token
 def list_orders(request):
     """
     Handle GET request to retrieve orders.
     - If ?id= provided (one or more), return matching orders.
     - If no id provided, return all orders.
     """
+    access_token = request.query_params.get('access_token')
+    if access_token != ACCEPTED_TOKEN:
+        return Response({"error": "Invalid access token."}, status=status.HTTP_403_FORBIDDEN)
+    
     ids = request.GET.getlist('id')  # ?id=1&id=2 支援多個
     if ids:
         try:
@@ -65,7 +76,9 @@ def list_orders(request):
 
 
 @api_view(['PUT'])
+@require_token
 def update_order(request, order_id):
+    """Update an existing order by ID."""
     try:
         order = Order.objects.get(id=order_id)
     except Order.DoesNotExist:
@@ -82,7 +95,9 @@ def update_order(request, order_id):
 
 
 @api_view(['DELETE'])
+@require_token
 def delete_order(request, order_id):
+    """Delete an existing order by ID."""
     try:
         order = Order.objects.get(id=order_id)
     except Order.DoesNotExist:
