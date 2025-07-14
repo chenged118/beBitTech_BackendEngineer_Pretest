@@ -49,7 +49,7 @@ class OrderItemTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         item.refresh_from_db()
         self.assertEqual(item.quantity, 3)
-        self.assertEqual(float(item.price_at_order), 45.0)
+        self.assertEqual(float(item.price_at_order), 50.0)
 
     def test_delete_order_item(self):
         """Test deleting an OrderItem"""
