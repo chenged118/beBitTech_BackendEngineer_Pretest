@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import Order
 from .models import Product
+from .models import OrderItem
 
 load_dotenv()
 ACCEPTED_TOKEN = os.getenv("ACCEPTED_TOKEN")
@@ -201,3 +202,98 @@ def delete_product(request, product_id):
 
     product.delete()
     return Response({"message": "Product deleted successfully."})
+
+@api_view(['POST'])
+@require_token
+def create_order_item(request):
+    try:
+        order_id = request.data.get('order_id')
+        product_id = request.data.get('product_id')
+        quantity = int(request.data.get('quantity', 1))
+
+        if not order_id or not product_id or quantity is None:
+            return Response(
+                {"error": "Missing required fields: order_id, product_id, quantity"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        order = Order.objects.get(id=order_id)
+        product = Product.objects.get(id=product_id)
+        item = OrderItem.objects.create(
+            order=order,
+            product=product,
+            quantity=quantity,
+            price_at_order=product.price
+        )
+        return Response({
+            "id": item.id,
+            "order_id": item.order.id,
+            "product_id": item.product.id,
+            "quantity": item.quantity,
+            "price_at_order": float(item.price_at_order)
+        }, status=status.HTTP_201_CREATED)
+    except Order.DoesNotExist:
+        return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Product.DoesNotExist:
+        return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@require_token
+def list_order_items(request):
+    item_id = request.query_params.get('id')
+    
+    if item_id:
+        try:
+            item = OrderItem.objects.get(id=item_id)
+            return Response({
+                "id": item.id,
+                "order_id": item.order.id,
+                "product_id": item.product.id,
+                "quantity": item.quantity,
+                "price_at_order": float(item.price_at_order)
+            })
+        except OrderItem.DoesNotExist:
+            return Response({"error": "Order item not found"}, status=status.HTTP_404_NOT_FOUND)
+    else:
+        items = OrderItem.objects.all()
+        data = [
+            {
+                "id": item.id,
+                "order_id": item.order.id,
+                "product_id": item.product.id,
+                "quantity": item.quantity,
+                "price_at_order": float(item.price_at_order)
+            } for item in items
+        ]
+        if not data:
+            return Response({"message": "No order items found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(data)
+
+@api_view(['PUT'])
+@require_token
+def update_order_item(request, item_id):
+    try:
+        item = OrderItem.objects.get(id=item_id)
+        quantity = request.data.get('quantity')
+        if quantity:
+            item.quantity = int(quantity)
+        item.save()
+        return Response({
+            "id": item.id,
+            "quantity": item.quantity,
+            "price_at_order": float(item.price_at_order)
+        })
+    except OrderItem.DoesNotExist:
+        return Response({"error": "Order item not found"}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['DELETE'])
+@require_token
+def delete_order_item(request, item_id):
+    try:
+        item = OrderItem.objects.get(id=item_id)
+        item.delete()
+        return Response({"message": "Order item deleted."})
+    except OrderItem.DoesNotExist:
+        return Response({"error": "Order item not found"}, status=status.HTTP_404_NOT_FOUND)
