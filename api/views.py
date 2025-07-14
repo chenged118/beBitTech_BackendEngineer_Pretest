@@ -16,10 +16,7 @@ ACCEPTED_TOKEN = os.getenv("ACCEPTED_TOKEN")
 @require_token
 def import_order(request):
     """Import a new order."""
-    access_token = request.data.get('access_token')
-    if access_token != ACCEPTED_TOKEN:
-        return Response({"error": "Invalid access token."}, status=status.HTTP_403_FORBIDDEN)
-
+    
     order_number = request.data.get('order_number')
     total_price = request.data.get('total_price')
 
@@ -48,10 +45,6 @@ def list_orders(request):
     - If ?id= provided (one or more), return matching orders.
     - If no id provided, return all orders.
     """
-    access_token = request.query_params.get('access_token')
-    if access_token != ACCEPTED_TOKEN:
-        return Response({"error": "Invalid access token."}, status=status.HTTP_403_FORBIDDEN)
-    
     ids = request.GET.getlist('id')  # ?id=1&id=2 支援多個
     if ids:
         try:
@@ -86,10 +79,6 @@ def update_order(request, order_id):
     except Order.DoesNotExist:
         return Response({"error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    access_token = request.data.get('access_token')
-    if access_token != ACCEPTED_TOKEN:
-        return Response({"error": "Invalid access token."}, status=status.HTTP_403_FORBIDDEN)
-
     order.order_number = request.data.get('order_number', order.order_number)
     order.total_price = request.data.get('total_price', order.total_price)
     order.save()
@@ -105,10 +94,6 @@ def delete_order(request, order_id):
     except Order.DoesNotExist:
         return Response({"error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    access_token = request.data.get('access_token')
-    if access_token != ACCEPTED_TOKEN:
-        return Response({"error": "Invalid access token."}, status=status.HTTP_403_FORBIDDEN)
-
     order.delete()
     return Response({"message": "Order deleted successfully."})
 
@@ -116,10 +101,6 @@ def delete_order(request, order_id):
 @require_token
 def create_product(request):
     """Create a new product."""
-    access_token = request.data.get('access_token')
-    if access_token != ACCEPTED_TOKEN:
-        return Response({"error": "Invalid access token."}, status=status.HTTP_403_FORBIDDEN)
-
     name = request.data.get('name')
     price = request.data.get('price')
 
@@ -139,10 +120,6 @@ def create_product(request):
 @require_token
 def list_products(request):
     """List products by ID or all products if no ID is provided."""
-    access_token = request.query_params.get('access_token')
-    if access_token != ACCEPTED_TOKEN:
-        return Response({"error": "Invalid access token."}, status=status.HTTP_403_FORBIDDEN)
-
     ids = request.query_params.get('id')
 
     if ids:
@@ -172,10 +149,6 @@ def list_products(request):
 @require_token
 def update_product(request, product_id):
     """Update an existing product by ID."""
-    access_token = request.data.get('access_token')
-    if access_token != ACCEPTED_TOKEN:
-        return Response({"error": "Invalid access token."}, status=status.HTTP_403_FORBIDDEN)
-
     try:
         product = Product.objects.get(id=product_id)
     except Product.DoesNotExist:
