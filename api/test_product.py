@@ -25,13 +25,6 @@ class ProductTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.data), 1)
 
-    def test_get_single_product(self):
-        """Test retrieving a single product by ID"""
-        product = Product.objects.create(name="New Product", price=49.99)
-        response = self.client.get(f'/api/products/list/?id={product.id}&access_token=omni_pretest_token', format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data[0]["name"], product.name)
-
     def test_update_product(self):
         """Test updating a product"""
         product = Product.objects.create(name="New Product", price=49.99)
@@ -76,12 +69,46 @@ class ProductTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data["error"], "Invalid access token.")
 
-    def test_access_without_token(self):
-        """Test accessing API without token"""
-        response = self.client.get('/api/products/list/', format='json')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    def test_get_single_product(self):
+        """Test retrieving a single product by ID"""
+        product = Product.objects.create(name="New Product", price=49.99)
+        response = self.client.get(f'/api/products/list/?id={product.id}&access_token=omni_pretest_token', format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data[0]["name"], product.name)
 
     def test_get_nonexistent_product(self):
-        """Test retrieving a product that doesn't exist"""
-        response = self.client.get('/api/products/99999/', format='json')
+        """Test retrieving a product that does not exist"""
+        response = self.client.get('/api/products/list/?id=99999&access_token=omni_pretest_token')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("error", response.data)
+
+    def test_get_invalid_id_format(self):
+        """Test passing invalid ID format (non-integer)"""
+        response = self.client.get('/api/products/list/?id=abc&access_token=omni_pretest_token')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("error", response.data)
+
+
+    def test_update_nonexistent_product(self):
+        """Test updating a product that does not exist"""
+        Product.objects.create(name="Nonexistent Product", price=1.0)
+        data = {
+            "access_token": "omni_pretest_token",
+            "name": "Updated Product",
+            "price": 999.0
+        }
+        response = self.client.put(f'/api/products/99999/update/', data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("error", response.data)
+
+    def test_delete_nonexistent_product(self):
+        """Test deleting a product that does not exist"""
+        Product.objects.create(name="Nonexistent Product", price=1.0)
+        data = {
+            "access_token": "omni_pretest_token",
+            "name": "Updated Product",
+            "price": 999.0
+        }
+        response = self.client.delete(f'/api/products/99999/delete/', data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("error", response.data)

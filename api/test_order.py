@@ -126,6 +126,17 @@ class OrderTestCase(APITestCase):
         response = self.client.put(f'/api/orders/{order.id}/update/', data, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_update_nonexistent_order(self):
+        """Test updating an order that does not exist"""
+        Order.objects.create(order_number="ORD-00010", total_price=1.0)
+        data = {
+            "access_token": "omni_pretest_token",
+            "total_price": 999.0
+        }
+        response = self.client.put(f'/api/orders/99999/update/', data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("error", response.data)
+
     def test_delete_order_invalid_token(self):
         """Test deleting an order with invalid token"""
         order = Order.objects.create(order_number="ORD-00020", total_price=1.0)
@@ -134,3 +145,14 @@ class OrderTestCase(APITestCase):
         }
         response = self.client.delete(f'/api/orders/{order.id}/delete/', data, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_delete_nonexistent_order(self):
+        """Test deleting an order that does not exist"""
+        Order.objects.create(order_number="ORD-00010", total_price=1.0)
+        data = {
+            "access_token": "omni_pretest_token",
+            "total_price": 999.0
+        }
+        response = self.client.delete(f'/api/orders/99999/delete/', data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("error", response.data)

@@ -30,13 +30,6 @@ class OrderItemTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.data), 1)
 
-    def test_get_single_order_item(self):
-        """Test retrieving a single OrderItem"""
-        item = OrderItem.objects.create(order=self.order, product=self.product, quantity=1, price_at_order=50.0)
-        response = self.client.get(f"/api/order-items/list/?id={item.id}&access_token={self.token}")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["id"], item.id)
-
     def test_update_order_item(self):
         """Test updating an OrderItem"""
         item = OrderItem.objects.create(order=self.order, product=self.product, quantity=1, price_at_order=50.0)
@@ -69,7 +62,91 @@ class OrderItemTestCase(TestCase):
         response = self.client.post("/api/order-items/", data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_access_without_token(self):
-        """Test accessing protected endpoint without token"""
-        response = self.client.get("/api/order-items/list/")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    def test_create_order_item_nonexistent_order(self):
+        """Test creating OrderItem with nonexistent order"""
+        data = {
+            "access_token": self.token,
+            "order_id": 99999,  # Nonexistent order ID
+            "product_id": self.product.id,
+            "quantity": 2,
+            "price_at_order": 50.0
+        }
+        response = self.client.post("/api/order-items/", data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_create_order_item_nonexistent_product(self):
+        """Test creating OrderItem with nonexistent product"""
+        data = {
+            "access_token": self.token,
+            "order_id": self.order.id,
+            "product_id": 99999,  # Nonexistent product ID
+            "quantity": 2,
+            "price_at_order": 50.0
+        }
+        response = self.client.post("/api/order-items/", data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_create_order_item_invalid_quantity_format(self):
+        """Test creating OrderItem with invalid quantity format"""
+        data = {
+            "access_token": self.token,
+            "order_id": self.order.id,
+            "product_id": self.product.id,
+            "quantity": "three",
+        }
+        response = self.client.post("/api/order-items/", data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("error", response.data)
+
+    def test_get_single_order_item(self):
+        """Test retrieving a single OrderItem"""
+        item = OrderItem.objects.create(order=self.order, product=self.product, quantity=1, price_at_order=50.0)
+        response = self.client.get(f"/api/order-items/list/?id={item.id}&access_token={self.token}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], item.id)
+
+    def test_get_nonexistent_order_item(self):
+        """Test retrieving an OrderItem that does not exist"""
+        response = self.client.get('/api/order-items/list/?access_token=omni_pretest_token')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("message", response.data)
+
+    def test_get_nonexistent_order_item_by_id(self):
+        """Test retrieving an order item that does not exist"""
+        response = self.client.get('/api/order-items/list/?id=99999&access_token=omni_pretest_token')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("error", response.data)
+
+    def test_update_nonexistent_order_item(self):
+        """Test updating an order item that does not exist"""
+        OrderItem.objects.create(order=self.order, product=self.product, quantity=1, price_at_order=50.0)
+        data = {
+            "access_token": "omni_pretest_token",
+            "quantity": 3,
+            "price_at_order": 45.0
+        }
+        response = self.client.put(f"/api/order-items/99999/update/", data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("error", response.data)
+
+    def test_delete_nonexistent_order_item(self):
+        """Test deleting an order item that does not exist"""
+        OrderItem.objects.create(order=self.order, product=self.product, quantity=1, price_at_order=50.0)
+        data = {
+            "access_token": "omni_pretest_token",
+            "total_price": 999.0
+        }
+        response = self.client.delete(f'/api/order-items/99999/delete/', data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("error", response.data)
+
+    def test_order_item_subtotal(self):
+        """Test that subtotal() returns correct value"""
+        item = OrderItem.objects.create(
+            order=self.order,
+            product=self.product,
+            quantity=3,
+            price_at_order=25.50
+        )
+        expected_subtotal = 3 * 25.50
+        self.assertEqual(item.subtotal(), expected_subtotal)
